@@ -1,0 +1,20 @@
+[package]
+name = "send_glitch"
+version = "0.1.0"
+authors = ["blakehawkins"]
+edition = "2018"
+license = "MIT OR Apache-2.0"
+description = "Read jsonlines from stdin, write messages to matrix.org"
+homepage = "https://github.com/blakehawkins/send_glitch"
+repository = "https://github.com/blakehawkins/send_glitch"
+readme = "README.md"
+
+[dependencies]
+futures = "0.1.29"
+glitch-in-the-matrix = { git = "https://github.com/eeeeeta/glitch-in-the-matrix.git", branch = "develop" }
+gm-types = { git = "https://github.com/eeeeeta/glitch-in-the-matrix.git", branch = "develop" }
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.8"
+serde_json = "1.0.47"
+tokio-core = "0.1.17"
+urlencoding = "1.0.0"
