@@ -1,10 +1,11 @@
 use std::env::args;
-use std::io::{Read, Result};
+use std::io::{Read, Result, Write};
 
 use futures::future::Future;
 use glitch_in_the_matrix::request::MatrixRequestable;
 use glitch_in_the_matrix::room::{NewRoom, RoomClient};
 use glitch_in_the_matrix::MatrixClient;
+use oops::Oops;
 use serde::{Deserialize, Serialize};
 use serde_yaml;
 use tokio_core::reactor::Core;
@@ -18,16 +19,6 @@ struct Config {
     account: String,
     html_json_key: String,
     text_json_key: Option<String>,
-}
-
-trait Oops<T> {
-    fn oops(self, msg: &str) -> Result<T>;
-}
-
-impl<T> Oops<T> for Option<T> {
-    fn oops(self, msg: &str) -> Result<T> {
-        self.ok_or_else(|| std::io::Error::new(std::io::ErrorKind::Other, msg))
-    }
 }
 
 fn main() -> Result<()> {
@@ -68,6 +59,9 @@ fn main() -> Result<()> {
         })
         .and_then(move |mut client| {
             println!("Access token: {}", client.get_access_token());
+            std::io::stdout()
+                .flush()
+                .expect("Failed to flush access token");
 
             NewRoom::from_alias(&mut client, &encode(&args2.room)).map(move |room| (client, room))
         })
