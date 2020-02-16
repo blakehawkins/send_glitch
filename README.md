@@ -1,4 +1,4 @@
-Read json from stdin, send matrix.org message to configured channel.
+Read jsonlines from stdin, send matrix.org message to configured channel.
 
 Usage:
 

@@ -1,5 +1,5 @@
 use std::env::args;
-use std::io::{Read, Result, Write};
+use std::io::{Error, ErrorKind, Result, Write};
 
 use futures::future::Future;
 use glitch_in_the_matrix::request::MatrixRequestable;
@@ -8,6 +8,7 @@ use glitch_in_the_matrix::MatrixClient;
 use oops::Oops;
 use serde::{Deserialize, Serialize};
 use serde_yaml;
+use stdinix::stdinix;
 use tokio_core::reactor::Core;
 use urlencoding::encode;
 
@@ -31,49 +32,55 @@ fn main() -> Result<()> {
     )?)
     .expect("Config file was not deserialisable.");
 
-    let mut buf = String::new();
-    std::io::stdin().lock().read_to_string(&mut buf)?;
+    stdinix(|jsonline| {
+        let res: serde_json::Value = serde_json::from_str(&jsonline.trim())?;
 
-    let res: serde_json::Value = serde_json::from_str(&buf)?;
+        let html: String = res[args.clone().html_json_key]
+            .as_str()
+            .to_owned()
+            .oops("Missing html key")?
+            .to_owned();
+        let text: Option<String> = args
+            .clone()
+            .text_json_key
+            .and_then(|v| res[v].as_str().map(|v| v.to_owned()));
 
-    let html: String = res[args.clone().html_json_key]
-        .as_str()
-        .to_owned()
-        .oops("Missing html key")?
-        .to_owned();
-    let text: Option<String> = args
-        .clone()
-        .text_json_key
-        .and_then(|v| res[v].as_str().map(|v| v.to_owned()));
+        let args2 = args.clone();
 
-    let args2 = args.clone();
+        let args = args.clone();
+        let handle2 = handle2.clone();
+        let msg_fut =
+            MatrixClient::new_from_access_token(&args.token, "https://matrix.org", &handle)
+                .or_else(move |mut _e| {
+                    let args = args.clone();
+                    MatrixClient::login_password(
+                        &args.account,
+                        &args.password,
+                        "https://matrix.org",
+                        &handle2,
+                    )
+                })
+                .and_then(move |mut client| {
+                    println!("Access token: {}", client.get_access_token());
+                    std::io::stdout()
+                        .flush()
+                        .expect("Failed to flush access token");
 
-    let msg_fut = MatrixClient::new_from_access_token(&args.token, "https://matrix.org", &handle)
-        .or_else(move |mut _e| {
-            MatrixClient::login_password(
-                &args.account,
-                &args.password,
-                "https://matrix.org",
-                &handle2,
-            )
-        })
-        .and_then(move |mut client| {
-            println!("Access token: {}", client.get_access_token());
-            std::io::stdout()
-                .flush()
-                .expect("Failed to flush access token");
+                    NewRoom::from_alias(&mut client, &encode(&args2.room))
+                        .map(move |room| (client, room))
+                })
+                .and_then(move |(mut cli, room)| {
+                    RoomClient {
+                        room: &room,
+                        cli: &mut cli,
+                    }
+                    .send_html(html, text)
+                })
+                .map(|_| ())
+                .map_err(|e| {
+                    Error::new(ErrorKind::Other, &format!("Failed to send - {:?}", e)[..])
+                });
 
-            NewRoom::from_alias(&mut client, &encode(&args2.room)).map(move |room| (client, room))
-        })
-        .and_then(move |(mut cli, room)| {
-            RoomClient {
-                room: &room,
-                cli: &mut cli,
-            }
-            .send_html(html, text)
-        });
-
-    core.run(msg_fut).expect("Unresolved errors encountered.");
-
-    Ok(())
+        core.run(msg_fut)
+    })
 }
