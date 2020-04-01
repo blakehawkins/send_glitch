@@ -12,5 +12,5 @@ account: "cooluser"
 html_json_key: "html"
 ' > config.yaml
 
-$ cargo run < '{ "html": "<a href=\"https://google.com\">My google link</a>" }'
+$ echo '{ "html": "<a href=\"https://google.com\">My google link</a>" }' | cargo run
 ```
