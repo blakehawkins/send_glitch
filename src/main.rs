@@ -32,6 +32,26 @@ fn main() -> Result<()> {
     )?)
     .expect("Config file was not deserialisable.");
 
+    let cli_and_room_fut = MatrixClient::new_from_access_token(&args.token, "https://matrix.org", &handle)
+    .or_else(move |mut _e| {
+        let args = args.clone();
+        MatrixClient::login_password(
+            &args.account,
+            &args.password,
+            "https://matrix.org",
+            &handle2,
+        )
+    })
+    .and_then(move |mut client| {
+        println!("Access token: {}", client.get_access_token());
+        std::io::stdout()
+            .flush()
+            .expect("Failed to flush access token");
+
+        NewRoom::from_alias(&mut client, &encode(&args2.room))
+            .map(move |room| (client, room))
+    });
+
     stdinix(|jsonline| {
         let res: serde_json::Value = serde_json::from_str(&jsonline.trim())?;
 
@@ -49,37 +69,19 @@ fn main() -> Result<()> {
 
         let args = args.clone();
         let handle2 = handle2.clone();
-        let msg_fut =
-            MatrixClient::new_from_access_token(&args.token, "https://matrix.org", &handle)
-                .or_else(move |mut _e| {
-                    let args = args.clone();
-                    MatrixClient::login_password(
-                        &args.account,
-                        &args.password,
-                        "https://matrix.org",
-                        &handle2,
-                    )
-                })
-                .and_then(move |mut client| {
-                    println!("Access token: {}", client.get_access_token());
-                    std::io::stdout()
-                        .flush()
-                        .expect("Failed to flush access token");
-
-                    NewRoom::from_alias(&mut client, &encode(&args2.room))
-                        .map(move |room| (client, room))
-                })
-                .and_then(move |(mut cli, room)| {
-                    RoomClient {
-                        room: &room,
-                        cli: &mut cli,
-                    }
-                    .send_html(html, text)
-                })
-                .map(|_| ())
-                .map_err(|e| {
-                    Error::new(ErrorKind::Other, &format!("Failed to send - {:?}", e)[..])
-                });
+        let msg_fut = cli_and_room_fut
+            .clone()
+            .and_then(move |(mut cli, room)| {
+                RoomClient {
+                    room: &room,
+                    cli: &mut cli,
+                }
+                .send_html(html, text)
+            })
+            .map(|_| ())
+            .map_err(|e| {
+                Error::new(ErrorKind::Other, &format!("Failed to send - {:?}", e)[..])
+            });
 
         core.run(msg_fut)
     })
