@@ -14,7 +14,7 @@ use urlencoding::encode;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 struct Config {
-    token: String,
+    token: Option<String>,
     password: String,
     room: String,
     account: String,
@@ -49,37 +49,42 @@ fn main() -> Result<()> {
 
         let args = args.clone();
         let handle2 = handle2.clone();
-        let msg_fut =
-            MatrixClient::new_from_access_token(&args.token, "https://matrix.org", &handle)
-                .or_else(move |mut _e| {
-                    let args = args.clone();
-                    MatrixClient::login_password(
-                        &args.account,
-                        &args.password,
-                        "https://matrix.org",
-                        &handle2,
-                    )
-                })
-                .and_then(move |mut client| {
-                    println!("Access token: {}", client.get_access_token());
-                    std::io::stdout()
-                        .flush()
-                        .expect("Failed to flush access token");
+        let token_fut = match args.clone().token {
+            Some(v) => futures::future::ok(v),
+            _ => futures::future::err(()),
+        };
+        let msg_fut = token_fut
+            .and_then(|token| {
+                MatrixClient::new_from_access_token(&token, "https://matrix.org", &handle)
+                    .map_err(|_| ())
+            })
+            .or_else(move |mut _e| {
+                let args = args.clone();
+                MatrixClient::login_password(
+                    &args.account,
+                    &args.password,
+                    "https://matrix.org",
+                    &handle2,
+                )
+            })
+            .and_then(move |mut client| {
+                println!("Access token: {}", client.get_access_token());
+                std::io::stdout()
+                    .flush()
+                    .expect("Failed to flush access token");
 
-                    NewRoom::from_alias(&mut client, &encode(&args2.room))
-                        .map(move |room| (client, room))
-                })
-                .and_then(move |(mut cli, room)| {
-                    RoomClient {
-                        room: &room,
-                        cli: &mut cli,
-                    }
-                    .send_html(html, text)
-                })
-                .map(|_| ())
-                .map_err(|e| {
-                    Error::new(ErrorKind::Other, &format!("Failed to send - {:?}", e)[..])
-                });
+                NewRoom::from_alias(&mut client, &encode(&args2.room))
+                    .map(move |room| (client, room))
+            })
+            .and_then(move |(mut cli, room)| {
+                RoomClient {
+                    room: &room,
+                    cli: &mut cli,
+                }
+                .send_html(html, text)
+            })
+            .map(|_| ())
+            .map_err(|e| Error::new(ErrorKind::Other, &format!("Failed to send - {:?}", e)[..]));
 
         core.run(msg_fut)
     })
