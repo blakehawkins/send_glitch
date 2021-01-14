@@ -7,7 +7,6 @@ use glitch_in_the_matrix::room::{NewRoom, RoomClient};
 use glitch_in_the_matrix::MatrixClient;
 use oops::Oops;
 use serde::{Deserialize, Serialize};
-use serde_yaml;
 use stdinix::stdinix;
 use tokio_core::reactor::Core;
 use urlencoding::encode;
@@ -20,6 +19,7 @@ struct Config {
     account: String,
     html_json_key: String,
     text_json_key: Option<String>,
+    server: Option<String>,
 }
 
 fn main() -> Result<()> {
@@ -27,9 +27,10 @@ fn main() -> Result<()> {
     let handle = core.handle();
     let handle2 = core.handle();
 
-    let args: Config = serde_yaml::from_reader(std::fs::File::open(
-        args().nth(1).unwrap_or_else(|| "config.yaml".into()),
-    )?)
+    let args: Config = serde_yaml::from_reader(
+        std::fs::File::open(args().nth(1).unwrap_or_else(|| "config.yaml".into()))
+            .oops("Failed to open config file. Usage: `send_glitch [config.yaml]`")?,
+    )
     .expect("Config file was not deserialisable.");
 
     stdinix(|jsonline| {
@@ -49,23 +50,26 @@ fn main() -> Result<()> {
 
         let args = args.clone();
         let handle2 = handle2.clone();
+        let server = args
+            .clone()
+            .server
+            .unwrap_or_else(|| "https://matrix.org".into());
+        let server2 = server.clone();
         let token_fut = match args.clone().token {
             Some(v) => futures::future::ok(v),
             _ => futures::future::err(()),
         };
         let msg_fut = token_fut
             .and_then(|token| {
-                MatrixClient::new_from_access_token(&token, "https://matrix.org", &handle)
-                    .map_err(|_| ())
+                let server = server.clone();
+                MatrixClient::new_from_access_token(&token, &server, &handle).map_err(|_| ())
             })
             .or_else(move |mut _e| {
                 let args = args.clone();
-                MatrixClient::login_password(
-                    &args.account,
-                    &args.password,
-                    "https://matrix.org",
-                    &handle2,
-                )
+                let server2 = server2.clone();
+                println!("Connecting {} to {}", args.account, server2);
+                std::io::stdout().flush().expect("Failed to flush");
+                MatrixClient::login_password(&args.account, &args.password, &server2, &handle2)
             })
             .and_then(move |mut client| {
                 println!("Access token: {}", client.get_access_token());

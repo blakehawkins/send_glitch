@@ -527,9 +527,9 @@ dependencies = [
 
 [[package]]
 name = "oops"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e28ad7b6cb6429af8f4a8c2a8280cdd099a647a77220d6d08a17c64205f864a8"
+checksum = "6a05b02569b46593ad7633f725dc3d96fe3609c065cdd5529e8e28b9e14d2a06"
 
 [[package]]
 name = "openssl"
@@ -785,7 +785,7 @@ checksum = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
 
 [[package]]
 name = "send_glitch"
-version = "0.2.2"
+version = "0.3.0"
 dependencies = [
  "futures",
  "glitch-in-the-matrix",
