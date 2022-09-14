@@ -9,8 +9,8 @@ echo '
 ---
 token: ""
 password: "<password>"
-room: "#roomname:matrix.org"
-account: "cooluser"
+room: "roomname"
+account: "@username:matrix.org"
 html_json_key: "html"
 ' > config.yaml
 
