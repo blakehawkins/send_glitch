@@ -32,13 +32,14 @@ async fn main() -> Result<()> {
     let account_name = args.clone().account;
     let user = UserId::parse(account_name).oops("invalid userid")?;
     let client = Client::builder()
-        .user_id(&user)
+        .server_name(user.server_name())
         .build()
         .await
         .oops("failed to build client")?;
     let password = args.clone().password;
     client
-        .login(user, &password, None, None)
+        .login_username(&user, &password)
+        .send()
         .await
         .oops("Failed to log in to homeserver")?;
 
