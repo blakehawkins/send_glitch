@@ -38,6 +38,7 @@ async fn main() -> Result<()> {
         .oops("failed to build client")?;
     let password = args.clone().password;
     client
+        .matrix_auth()
         .login_username(&user, &password)
         .send()
         .await
@@ -76,7 +77,7 @@ async fn main() -> Result<()> {
                 .and_then(|v| res[v].as_str().map(|v| v.to_owned()))
                 .unwrap_or_else(|| "".into());
 
-            room.send(RoomMessageEventContent::text_html(text, html), None)
+            room.send(RoomMessageEventContent::text_html(text, html))
                 .await
                 .oops("Failed to send a message")?;
 
