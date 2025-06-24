@@ -17,4 +17,4 @@ serde_json = "1.0"
 stdinix = "0.2"
 tokio = { version = "1.20", features = ["full"] }
 urlencoding = "1.0"
-matrix-sdk = "0.8"
+matrix-sdk = "0.11"
