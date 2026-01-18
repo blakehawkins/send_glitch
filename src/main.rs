@@ -1,10 +1,10 @@
 use std::env::args;
-use std::io::Result;
 
+use eyre::Result;
 use matrix_sdk::{
-    config::SyncSettings,
-    ruma::{events::room::message::RoomMessageEventContent, UserId},
     Client,
+    config::SyncSettings,
+    ruma::{UserId, events::room::message::RoomMessageEventContent},
 };
 use oops::Oops;
 use serde::{Deserialize, Serialize};
