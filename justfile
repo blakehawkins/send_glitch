@@ -1,7 +1,10 @@
 default:
     just --list
 
-check: clippy cargo-check fmt test update outdated
+check: update clippy cargo-check fmt test outdated
+
+update:
+    cargo update
 
 clippy:
     cargo clippy
@@ -14,9 +17,6 @@ fmt:
 
 test:
     cargo test
-
-update:
-    cargo update
 
 outdated:
     cargo outdated -R
